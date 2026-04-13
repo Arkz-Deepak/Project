@@ -24,14 +24,12 @@ def init_mqtt():
         try:
             data = json.loads(message.payload.decode())
             data_store.append(data)
-            if len(data_store) > 100: # Keep 100 points for smooth charts
+            if len(data_store) > 100: 
                 data_store.pop(0)
         except Exception as e:
             pass
     client.on_message = on_message
     client.connect("broker.emqx.io", 1883, 60)
-    
-    # 🔄 SYNCED TOPIC: Matches the final 17-register edge.py script
     client.subscribe("luminous_ml/complete_telemetry")
     client.loop_start()
     return client
@@ -58,7 +56,7 @@ while True:
             # --- 2. UNIFIED SYSTEM METRICS ---
             st.markdown("### 📊 AI-Driven System Health & Core Metrics")
 
-            # Create 4 columns for the most important data
+            # Creating 4 columns for the most important data
             kpi1, kpi2, kpi3, kpi4 = st.columns(4)
 
             # Column 1: The ML Prediction
@@ -92,7 +90,6 @@ while True:
                 st.subheader("Grid Stability (Voltage & Frequency)")
                 colA, colB = st.columns(2)
                 with colA:
-                    # Synced Key: '3004'
                     st.line_chart(df.set_index('timestamp')['3004'], color="#0000FF")
                 with colB:
                     st.line_chart(df.set_index('timestamp')['3058_grid_hz'], color="#00FF00")
@@ -106,14 +103,12 @@ while True:
                     st.line_chart(df.set_index('timestamp')['3019_temp'], color="#FF4500")
 
             # --- 5. FAULT LOG ---
-            # Synced Keys: '3059' and '3007'
             if latest['3059'] == 1 or latest['3007'] == 1:
                 st.toast("Fault Detected in Telemetry Stream!", icon="🔥")
 
             # --- 6. RAW MODBUS AUDIT LOG ---
             st.divider()
             with st.expander("🔍 Full Modbus Register Audit Log (All 17 Registers)"):
-                # Displays the trailing 10 data points directly from the dataframe
                 st.dataframe(df.tail(10), use_container_width=True)
 
         else:
