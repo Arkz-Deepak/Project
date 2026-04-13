@@ -5,8 +5,8 @@ import pandas as pd
 import time
 
 # --- PAGE CONFIG ---
-st.set_page_config(page_title="Luminous PdM Command Center", layout="wide")
-st.title("⚡ Luminous Predictive Maintenance Command Center")
+st.set_page_config(page_title="PdM Command Center", layout="wide")
+st.markdown("<h1 style='text-align: center;'>⚡ Luminous Predictive Maintenance Command Center</h1>", unsafe_allow_html=True)
 st.markdown("Monitoring Power Quality, Thermal Dynamics, and Component Degradation.")
 
 # --- MEMORY SETUP ---
@@ -30,7 +30,9 @@ def init_mqtt():
             pass
     client.on_message = on_message
     client.connect("broker.emqx.io", 1883, 60)
-    client.subscribe("hackathon/luminous_final_v1/health")
+    
+    # 🔄 SYNCED TOPIC: Matches the final 17-register edge.py script
+    client.subscribe("luminous_ml/complete_telemetry")
     client.loop_start()
     return client
 
@@ -47,24 +49,39 @@ while True:
             
             # 1. DYNAMIC ALERT BANNER
             if "CRITICAL" in latest['status'] or "ERROR" in latest['status']:
-                st.error(f"🚨 {latest['status']} - DisPATCH ENGINEER IMMEDIATELY")
+                st.error(f"🚨 {latest['status']} - DISPATCH ENGINEER IMMEDIATELY")
             elif "WARNING" in latest['status']:
                 st.warning(f"⚠️ {latest['status']} - Monitor closely.")
             else:
                 st.success(f"✅ {latest['status']}")
+                
+            # --- 2. UNIFIED SYSTEM METRICS ---
+            st.markdown("### 📊 AI-Driven System Health & Core Metrics")
 
-            # 2. KEY PERFORMANCE INDICATORS (KPIs)
-            st.markdown("### 📊 System Health & Core Metrics")
-            kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
-            kpi1.metric("Remaining Life (RUL)", f"{latest['rul']}%")
-            kpi2.metric("Inverter Temp", f"{latest['3019_temp']} °C")
-            kpi3.metric("Mains Voltage", f"{latest['3004_mains_v']} V")
-            kpi4.metric("Grid Freq", f"{latest['3058_grid_hz']} Hz")
-            kpi5.metric("Switch Cycles", f"{latest['3011_cycles']}")
+            # Create 4 columns for the most important data
+            kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+
+            # Column 1: The ML Prediction
+            kpi1.metric("ML Predicted RUL", f"{latest['rul']}%")
+
+            # Column 2: The Estimated Time to Failure (TTF)
+            kpi2.metric("Est. Cycles Left", f"{latest['ttf_cycles']}")
+
+            # Column 3: The Primary Stress Factor (Synced Key)
+            kpi3.metric("Current Temp (3019)", f"{latest['3019_temp']} °C")
+
+            # Column 4: The Mechanical Wear count (Synced Key)
+            kpi4.metric("Switch Cycles (3011)", f"{latest['3011']}")
 
             st.divider()
 
-            # 3. TABBED DASHBOARD FOR DEEP DIVES
+            # --- 3. EARLY WARNING SYSTEM ---
+            if latest['ttf_cycles'] < 500:
+                st.warning(f"🚨 ML ALERT: Component failure predicted within {latest['ttf_cycles']} switching operations. Notify Service Engineer.")
+            elif latest['rul'] < 20:
+                st.error("🚨 CRITICAL: Remaining Useful Life below 20%. Immediate replacement advised.")
+                
+            # --- 4. TABBED DASHBOARD FOR DEEP DIVES ---
             tab1, tab2, tab3 = st.tabs(["📉 Degradation Trend", "⚡ Power Quality", "🔋 Load & Temp Dynamics"])
             
             with tab1:
@@ -75,7 +92,8 @@ while True:
                 st.subheader("Grid Stability (Voltage & Frequency)")
                 colA, colB = st.columns(2)
                 with colA:
-                    st.line_chart(df.set_index('timestamp')['3004_mains_v'], color="#0000FF")
+                    # Synced Key: '3004'
+                    st.line_chart(df.set_index('timestamp')['3004'], color="#0000FF")
                 with colB:
                     st.line_chart(df.set_index('timestamp')['3058_grid_hz'], color="#00FF00")
                     
@@ -87,9 +105,16 @@ while True:
                 with colD:
                     st.line_chart(df.set_index('timestamp')['3019_temp'], color="#FF4500")
 
-            # 4. FAULT LOG
-            if latest['3059_overload'] == 1 or latest['3007_trip'] == 1:
+            # --- 5. FAULT LOG ---
+            # Synced Keys: '3059' and '3007'
+            if latest['3059'] == 1 or latest['3007'] == 1:
                 st.toast("Fault Detected in Telemetry Stream!", icon="🔥")
+
+            # --- 6. RAW MODBUS AUDIT LOG ---
+            st.divider()
+            with st.expander("🔍 Full Modbus Register Audit Log (All 17 Registers)"):
+                # Displays the trailing 10 data points directly from the dataframe
+                st.dataframe(df.tail(10), use_container_width=True)
 
         else:
             st.info("📡 Connecting to Luminous Edge Device... Waiting for Modbus sync.")
