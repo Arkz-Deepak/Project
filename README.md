@@ -65,4 +65,5 @@ This project successfully simulates and monitors the following data points:
 | **3002/3003**| DISCHARGE/CHARGE CURRENT | Battery Load Dynamics |
 | **3012** | MAINS OK FLAG | State Indicator |
 | **3020/3045**| SYSTEM/INVERTER STATE | State Indicator |
+
 Developed for APOGEE 26
